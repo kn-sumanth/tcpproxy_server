@@ -56,6 +56,8 @@
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread/thread.hpp>
 
 
 namespace tcp_proxy
@@ -69,9 +71,10 @@ namespace tcp_proxy
       typedef ip::tcp::socket socket_type;
       typedef boost::shared_ptr<bridge> ptr_type;
 
-      bridge(boost::asio::io_service& ios)
+      bridge(boost::asio::io_service& ios, unsigned short delay)
       : downstream_socket_(ios),
-        upstream_socket_  (ios)
+        upstream_socket_  (ios),
+        delay_(delay)
       {}
 
       socket_type& downstream_socket()
@@ -189,6 +192,7 @@ namespace tcp_proxy
       {
          if (!error)
          {
+            boost::this_thread::sleep(boost::posix_time::milliseconds(delay_));
             downstream_socket_.async_read_some(
                  boost::asio::buffer(downstream_data_,max_data_length),
                  boost::bind(&bridge::handle_downstream_read,
@@ -218,6 +222,7 @@ namespace tcp_proxy
 
       socket_type downstream_socket_;
       socket_type upstream_socket_;
+      unsigned short delay_;
 
       enum { max_data_length = 8192 }; //8KB
       unsigned char downstream_data_[max_data_length];
@@ -231,10 +236,10 @@ namespace tcp_proxy
       {
       public:
 
-         acceptor(boost::asio::io_service& io_service,
+         acceptor(boost::asio::io_service& io_service, unsigned short delay,
                   const std::string& local_host, unsigned short local_port,
                   const std::string& upstream_host, unsigned short upstream_port)
-         : io_service_(io_service),
+         : io_service_(io_service),delay_(delay),
            localhost_address(boost::asio::ip::address_v4::from_string(local_host)),
            acceptor_(io_service_,ip::tcp::endpoint(localhost_address,local_port)),
            upstream_port_(upstream_port),
@@ -245,7 +250,7 @@ namespace tcp_proxy
          {
             try
             {
-               session_ = boost::shared_ptr<bridge>(new bridge(io_service_));
+               session_ = boost::shared_ptr<bridge>(new bridge(io_service_, delay_));
 
                acceptor_.async_accept(session_->downstream_socket(),
                     boost::bind(&acceptor::handle_accept,
@@ -281,6 +286,7 @@ namespace tcp_proxy
          }
 
          boost::asio::io_service& io_service_;
+         unsigned short delay_;
          ip::address_v4 localhost_address;
          ip::tcp::acceptor acceptor_;
          ptr_type session_;
@@ -293,14 +299,19 @@ namespace tcp_proxy
 
 int main(int argc, char* argv[])
 {
-   if (argc != 5)
+   if (argc < 5)
    {
-      std::cerr << "usage: tcpproxy_server <local host ip> <local port> <forward host ip> <forward port>" << std::endl;
+      std::cerr << "usage: tcpproxy_server <local host ip> <local port> <forward host ip> <forward port> <delay_ms>" << std::endl;
       return 1;
    }
 
+   unsigned short delay = 0;
    const unsigned short local_port   = static_cast<unsigned short>(::atoi(argv[2]));
    const unsigned short forward_port = static_cast<unsigned short>(::atoi(argv[4]));
+   if (argc > 5)
+   {
+     delay = static_cast<unsigned short>(::atoi(argv[5]));
+   }
    const std::string local_host      = argv[1];
    const std::string forward_host    = argv[3];
 
@@ -308,7 +319,7 @@ int main(int argc, char* argv[])
 
    try
    {
-      tcp_proxy::bridge::acceptor acceptor(ios,
+      tcp_proxy::bridge::acceptor acceptor(ios, delay,
                                            local_host, local_port,
                                            forward_host, forward_port);
 
