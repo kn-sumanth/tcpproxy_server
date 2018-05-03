@@ -2,6 +2,8 @@
 A proxy server for TCP with option of inducing packet delays
 The original source is taken from [http://www.partow.net](http://www.partow.net/programming/tcpproxy/index.html) and only slightly modified to compile for mac and also add the option for delay
 ## build
+On linux install boost with: `apt-get install libboost-all-dev`
+
 `make clean`
 
 `make`
