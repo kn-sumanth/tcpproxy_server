@@ -1,14 +1,12 @@
-FROM ubuntu:16.04 as build
-RUN apt-get update
-RUN apt-get install -y libboost-all-dev
-COPY Makefile /src/
+FROM alpine as build
+RUN apk --no-cache add boost
+RUN apk --no-cache add g++ make boost-dev
+COPY Makefile.apline /src/Makefile
 COPY tcpproxy_server.cpp /src/
-RUN apt-get install -y build-essential
 WORKDIR /src
 RUN make
-FROM ubuntu:16.04
-RUN apt-get update
-RUN apt-get install -y libboost-all-dev
+FROM alpine
+RUN apk --no-cache add boost
 WORKDIR /opt
 COPY --from=build /src/tcpproxy_server ./
 COPY tcpproxy_server.sh ./
