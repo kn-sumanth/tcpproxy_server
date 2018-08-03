@@ -47,9 +47,12 @@
 
 
 #include <cstdlib>
+#include <csignal>
 #include <cstddef>
 #include <iostream>
 #include <string>
+
+#include <stdlib.h>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -59,6 +62,12 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp>
 
+// SIGINT handler
+void int_handler(int x)
+{
+exit(EXIT_FAILURE); // after pressing CTRL+C you'll see this message
+
+}
 
 namespace tcp_proxy
 {
@@ -299,6 +308,7 @@ namespace tcp_proxy
 
 int main(int argc, char* argv[])
 {
+   signal(SIGINT,int_handler);  
    if (argc < 5)
    {
       std::cerr << "usage: tcpproxy_server <local host ip> <local port> <forward host ip> <forward port> <delay_ms>" << std::endl;
