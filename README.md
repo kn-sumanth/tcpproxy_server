@@ -16,3 +16,8 @@ This proxy can used for any tcp commnication like: database, redis, http, etc.
 
 The delay makes it easy to test the timeouts for these interactions.
 
+### docker
+`docker run knsumanth/tcpproxy <listening ip> <listening port> <forward host ip> <forward port> <delay_ms>`
+
+expose a port from a container on docker network
+`docker run --network <network-name> -p <local-port>:80 knsumanth/tcpproxy 0.0.0.0 80 <container host/ip> <container port>`
